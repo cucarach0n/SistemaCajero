@@ -16,6 +16,8 @@ struct Cliente
 {
 	int codigo;
 	char nombre[30];
+	char dni[30];
+	int pin;
 	double saldo;
 };
 
@@ -36,6 +38,8 @@ void MostrarListaCliente(vector<Cliente>& lista);
 void listarBilletes();
 void modificarBilletes(int id);
 Billete buscarBillete(int id);
+Cliente buscarClienteDni(string dni);
+
 //menus
 void Principal();
 void menuPrincipal();
@@ -100,7 +104,31 @@ void menuPrincipal() {
 		switch (op) {
 		case '1': {
 			system("cls");
-			menuCliente();
+			string dni;
+			int pin;
+			cout << "Ingrese su DNI: ";
+			cin >> dni;
+			Cliente cliente = buscarClienteDni(dni);
+			if (cliente.codigo > 0) {
+				cout << "Ingrese su pin: " ;
+				cin >> pin;
+				if (cliente.pin == pin) {
+					system("cls");
+					menuCliente();
+				}
+				else {
+					cout << "Pin incorrecto" << endl;
+					system("pause");
+					system("cls");
+					menuPrincipal();
+				}
+			}
+			else {
+				cout << "No se encontro el cliente" << endl;
+				system("pause");
+				system("cls");
+				menuPrincipal();
+			}
 			break; }
 
 		case '2': {
@@ -212,7 +240,6 @@ void menuAdministrador() {
 			system("cls");
 			listarCliente();
 			cout << endl;
-			cout << "lista clientes ordenada: " << endl;
 			vector<Cliente> lisClientes = ObtenerListaCliente();
 			ordenarSEL(lisClientes);
 			MostrarListaCliente(lisClientes);
@@ -220,12 +247,6 @@ void menuAdministrador() {
 			menuAdministrador();
 			break; }
 		case '3': {
-			/*
-				int codigo;
-				char nombre[30];
-				double saldo;
-			*/
-
 			system("cls");
 			int id;
 			cout << "Ingrese el id del cliente que desea buscar: ";
@@ -283,11 +304,19 @@ void registrarCliente() {
 
 	if (caux.codigo == -1)
 	{
-
+		/*
+			int codigo;
+			char nombre[30];
+			char dni[8];
+			char pin[4];
+			double saldo;
+		*/
 		cin.ignore();
 		cout << "Nombre: ";
 		cin.getline(c.nombre, 30);
-
+		cout << "dni: ";
+		cin.getline(c.dni, 30);
+		c.pin = 1000+rand()%(9999-1000);
 		cout << "Saldo: ";
 		cin >> c.saldo;
 
@@ -295,6 +324,8 @@ void registrarCliente() {
 		fescribir.open(ARCHIVO_CLIENTES.c_str(), ios::out | ios::app); // crear y agregar
 		fescribir << c.codigo << ";";
 		fescribir << c.nombre << ";";
+		fescribir << c.dni << ";";
+		fescribir << c.pin << ";";
 		fescribir << c.saldo << "\n";
 		fescribir.close();
 	}
@@ -317,19 +348,25 @@ void listarCliente() {
 	}
 
 	cout << endl << "Listado de clientes" << endl;
-	string codigo, nombre, saldo;
+	string codigo, nombre, dni,pin, saldo;
 	while (!leer_archivo.eof()) {
 		getline(leer_archivo, codigo, ';');
 		getline(leer_archivo, nombre, ';');
+		getline(leer_archivo, dni, ';');
+		getline(leer_archivo, pin, ';');
 		getline(leer_archivo, saldo, '\n');
 
 		if (codigo.length() > 0)
 		{
 			cout.width(8);
 			cout << left << codigo;
-			cout.width(5);
+			cout.width(12);
 			cout << left << nombre;
-			cout.width(15);
+			cout.width(12);
+			cout << left << dni;
+			cout.width(12);
+			cout << left << pin;
+			cout.width(12);
 			cout << right << saldo;
 			cout << endl;
 
@@ -408,16 +445,57 @@ Cliente buscarCliente(int id)
 		return c;
 	}
 
-	string codigo, nombre, saldo;
+	string codigo, nombre, dni, pin, saldo;
 	while (!leer_archivo.eof()) {
 		getline(leer_archivo, codigo, ';');
 		getline(leer_archivo, nombre, ';');
+		getline(leer_archivo, dni, ';');
+		getline(leer_archivo, pin, ';');
 		getline(leer_archivo, saldo, '\n');
 
 		if (codigo.length() > 0 && atoi(codigo.c_str()) == id)
 		{
 			c.codigo = atoi(codigo.c_str());
 			strcpy_s(c.nombre, nombre.c_str());
+			strcpy_s(c.dni, dni.c_str());
+			c.pin = atoi(pin.c_str());
+			c.saldo = atoi(saldo.c_str());
+			break;
+		}
+
+	}
+	leer_archivo.close();
+	return c;
+
+}
+
+Cliente buscarClienteDni(string dniBuscar)
+{
+
+	Cliente c;
+	c.codigo = -1;
+
+	ifstream leer_archivo;
+	leer_archivo.open(ARCHIVO_CLIENTES.c_str(), ios::in);
+	if (leer_archivo.fail()) {
+		cout << endl << " No se puede leer el archivo" << endl;
+		return c;
+	}
+
+	string codigo, nombre, dni, pin, saldo;
+	while (!leer_archivo.eof()) {
+		getline(leer_archivo, codigo, ';');
+		getline(leer_archivo, nombre, ';');
+		getline(leer_archivo, dni, ';');
+		getline(leer_archivo, pin, ';');
+		getline(leer_archivo, saldo, '\n');
+
+		if (dni.length() > 0 && dni == dniBuscar)
+		{
+			c.codigo = atoi(codigo.c_str());
+			strcpy_s(c.nombre, nombre.c_str());
+			strcpy_s(c.dni, dni.c_str());
+			c.pin = atoi(pin.c_str());
 			c.saldo = atoi(saldo.c_str());
 			break;
 		}
@@ -488,10 +566,12 @@ void ModificarCliente(int id)
 	ofstream tmpArchivo;
 	tmpArchivo.open(ARCHIVO_TEMPORAL.c_str(), ios::out | ios::app);
 
-	string codigo, nombre, saldo;
+	string codigo, nombre, dni,pin,saldo;
 	while (!leer_archivo.eof()) {
 		getline(leer_archivo, codigo, ';');
 		getline(leer_archivo, nombre, ';');
+		getline(leer_archivo, dni, ';');
+		getline(leer_archivo, pin, ';');
 		getline(leer_archivo, saldo, '\n');
 
 		if (codigo.length() > 0)
@@ -499,12 +579,12 @@ void ModificarCliente(int id)
 			if (atoi(codigo.c_str()) == id)
 			{
 				// double saldotmp = atof(saldo.c_str())+monto;
-				tmpArchivo << modCliente.codigo << ";" << modCliente.nombre << ";" << modCliente.saldo << "\n";
+				tmpArchivo << modCliente.codigo << ";" << modCliente.nombre << ";" << modCliente.dni << ";" << modCliente.pin << ";"<< modCliente.saldo << "\n";
 
 			}
 			else
 			{
-				tmpArchivo << codigo << ";" << nombre << ";" << saldo << "\n";
+				tmpArchivo << codigo << ";" << nombre << ";" << dni << ";" << pin << ";" << saldo << "\n";
 			}
 		}
 
@@ -585,10 +665,12 @@ vector<Cliente> ObtenerListaCliente()
 		return lista;
 	}
 
-	string codigo, nombre, saldo;
+	string codigo, nombre, dni,pin,saldo;
 	while (!leer_archivo.eof()) {
 		getline(leer_archivo, codigo, ';');
 		getline(leer_archivo, nombre, ';');
+		getline(leer_archivo, dni, ';');
+		getline(leer_archivo, pin, ';');
 		getline(leer_archivo, saldo, '\n');
 
 		if (codigo.length() > 0)
@@ -596,6 +678,8 @@ vector<Cliente> ObtenerListaCliente()
 			Cliente c;
 			c.codigo = atoi(codigo.c_str());
 			strcpy_s(c.nombre, nombre.c_str());
+			strcpy_s(c.dni, dni.c_str());
+			c.pin = atoi(pin.c_str());
 			c.saldo = atoi(saldo.c_str());
 			lista.push_back(c);
 
@@ -629,10 +713,10 @@ void ordenarSEL(vector<Cliente>& lista) {
 }
 void MostrarListaCliente(vector<Cliente>& lista)
 {
-	cout << endl << "Lista De Clientes" << endl;
+	cout << endl << "Lista De Clientes Ordenada" << endl;
 	for (int i = 0; i < lista.size(); i++)
 	{
 		Cliente c = lista[i];
-		cout << c.codigo << "\t" << c.nombre << "\t" << c.saldo << endl;
+		cout << c.codigo << "\t" << c.nombre << "\t"<< c.dni << "\t"<< c.pin << "\t" << c.saldo << endl;
 	}
 }
