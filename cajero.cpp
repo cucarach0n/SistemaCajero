@@ -498,7 +498,6 @@ void modificarBilletes(int id)
 
 	ofstream tmpArchivo;
 	tmpArchivo.open(ARCHIVO_TEMPORAL.c_str(), ios::out);
-
 	string billete, cantidad;
 	while (!leer_archivo.eof()) {
 
