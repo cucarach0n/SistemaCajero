@@ -21,7 +21,7 @@ struct Cliente
 
 struct Billete
 {
-	int codigo;
+	int billete;
 	double saldo;
 };
 
@@ -35,6 +35,7 @@ void ordenarSEL(vector<Cliente>& lista);
 void MostrarListaCliente(vector<Cliente>& lista);
 void listarBilletes();
 void modificarBilletes(int id);
+Billete buscarBillete(int id);
 //menus
 void Principal();
 void menuPrincipal();
@@ -109,12 +110,12 @@ void menuPrincipal() {
 			//getline(cin, usuario);
 			cout << "Ingrese su pass" << endl;
 			cin >> contrasena;
-			if(usuario == "admin" && contrasena == "1234"){
+			if (usuario == "admin" && contrasena == "1234") {
 				cout << "Inicio de sesion exitoso!" << endl;
 				system("cls");
 				menuAdministrador();
 			}
-			else{
+			else {
 				cout << "Usuario o contraseña incorrectos" << endl;
 				system("pause");
 				system("cls");
@@ -196,7 +197,7 @@ void menuAdministrador() {
 		cout << " [3] Buscar Clientes " << endl;
 		cout << " [4] Modificar Clientes " << endl;
 		cout << " [5] Listar Dispensador " << endl;
-		cout << " [6] Registro Dispensador " << endl;
+		cout << " [6] Modificar Dispensador " << endl;
 		cout << " [7] Salir " << endl;
 		cout << " Elija a donde desea ir: ";
 		cin >> mc;
@@ -245,7 +246,7 @@ void menuAdministrador() {
 			int id;
 			cout << "Ingrese el id del cliente que desea modificar: ";
 			cin >> id;
-			ModificarCliente(id); 
+			ModificarCliente(id);
 			break; }
 		case '5': {
 			listarBilletes();
@@ -253,9 +254,10 @@ void menuAdministrador() {
 			menuAdministrador();
 			break; }
 		case '6': {
-			int codigo, cantidad;
+			int codigo;
 			cout << "Ingrese el codigo del billete: ";
 			cin >> codigo;
+
 			modificarBilletes(codigo);
 
 			menuPrincipal();
@@ -264,7 +266,7 @@ void menuAdministrador() {
 			menuPrincipal();
 			break; }
 		}
-		
+
 
 	} while (mc != '3');
 	system("cls");
@@ -335,7 +337,7 @@ void listarCliente() {
 
 	}
 	leer_archivo.close();
-	
+
 }
 
 
@@ -356,30 +358,30 @@ void listarBilletes() {
 		if (billete.length() > 0)
 		{
 			cout.width(8);
-			switch(stoi(billete))
+			switch (stoi(billete))
 			{
-				case 1:{
-					cout << left << "Billete de 10 ";
-					break;
-				}
-				case 2:{
-					cout << left << "Billete de 20 ";
-					break;
-				}
-				case 3:{
-					cout << left << "Billete de 50 ";
-					break;
-				}
-				case 4:{
-					cout << left << "Billete de 100 ";
-					break;
-				}
-				case 5:{
-					cout << left << "Billete de 200 ";
-					break;
-				}
+			case 1: {
+				cout << left << "Billete de 10 ";
+				break;
 			}
-			
+			case 2: {
+				cout << left << "Billete de 20 ";
+				break;
+			}
+			case 3: {
+				cout << left << "Billete de 50 ";
+				break;
+			}
+			case 4: {
+				cout << left << "Billete de 100 ";
+				break;
+			}
+			case 5: {
+				cout << left << "Billete de 200 ";
+				break;
+			}
+			}
+
 			cout.width(5);
 			cout << left << cantidad;
 			cout.width(15);
@@ -389,11 +391,11 @@ void listarBilletes() {
 
 	}
 	leer_archivo.close();
-	
+
 }
 
 
-Cliente buscarCliente(int id) 
+Cliente buscarCliente(int id)
 {
 
 	Cliente c;
@@ -424,30 +426,61 @@ Cliente buscarCliente(int id)
 	leer_archivo.close();
 	return c;
 
-} 
+}
 
-void ModificarCliente(int id) 
+Billete buscarBillete(int id)
+{
+
+	Billete b;
+	b.billete = -1;
+
+	ifstream leer_archivo;
+	leer_archivo.open(ARCHIVO_BILLETES.c_str(), ios::in);
+	if (leer_archivo.fail()) {
+		cout << endl << " No se puede leer el archivo" << endl;
+		return b;
+	}
+
+	string billete, saldo;
+	while (!leer_archivo.eof()) {
+		getline(leer_archivo, billete, ';');
+		getline(leer_archivo, saldo, '\n');
+
+		if (billete.length() > 0 && atoi(billete.c_str()) == id)
+		{
+			b.billete = atoi(billete.c_str());
+			b.saldo = atoi(saldo.c_str());
+			break;
+		}
+
+	}
+	leer_archivo.close();
+	return b;
+
+}
+
+void ModificarCliente(int id)
 {
 
 	Cliente modCliente = buscarCliente(id);
-    if (modCliente.codigo == -1)
-    {
-        cout << endl << "No encontrado" << endl;
-        return;
-    }
+	if (modCliente.codigo == -1)
+	{
+		cout << endl << "No encontrado" << endl;
+		return;
+	}
 
 	ifstream leer_archivo;
 	leer_archivo.open(ARCHIVO_CLIENTES.c_str(), ios::in);
 	if (leer_archivo.fail()) {
 		cout << endl << " No se puede leer el archivo" << endl;
-		return ;
+		return;
 	}
 
-	
+
 	cin.ignore();
 	cout << "Nombre ";
-	//cin.getline(modCliente.nombre, 30);
-	cin >> modCliente.nombre;
+	cin.getline(modCliente.nombre, 30);
+	//cin >> modCliente.nombre;
 	cout << "Saldo ";
 	cin >> modCliente.saldo;
 
@@ -458,17 +491,18 @@ void ModificarCliente(int id)
 	string codigo, nombre, saldo;
 	while (!leer_archivo.eof()) {
 		getline(leer_archivo, codigo, ';');
+		getline(leer_archivo, nombre, ';');
 		getline(leer_archivo, saldo, '\n');
 
-		if (codigo.length() > 2)
+		if (codigo.length() > 0)
 		{
-			if (atoi(codigo.c_str()) == id) 
+			if (atoi(codigo.c_str()) == id)
 			{
 				// double saldotmp = atof(saldo.c_str())+monto;
-				tmpArchivo << codigo << ";" << modCliente.nombre << ";" << modCliente.saldo << "\n";
+				tmpArchivo << modCliente.codigo << ";" << modCliente.nombre << ";" << modCliente.saldo << "\n";
 
 			}
-			else 
+			else
 			{
 				tmpArchivo << codigo << ";" << nombre << ";" << saldo << "\n";
 			}
@@ -483,53 +517,64 @@ void ModificarCliente(int id)
 	menuAdministrador();
 }
 
-void modificarBilletes(int id) 
+void modificarBilletes(int id)
 {
-	
-	ifstream leer_archivo;
-	leer_archivo.open(ARCHIVO_BILLETES.c_str(), ios::in);
-	if (leer_archivo.fail()) {
-		cout << endl << " No se puede leer el archivo" << endl;
-		return ;
+
+	Billete modBillete = buscarBillete(id);
+	if (modBillete.billete == -1)
+	{
+		cout << endl << "No encontrado" << endl;
+		return;
 	}
 
-	Billete modBillete;
+	
+
+	ifstream leer_archivoBillete;
+	leer_archivoBillete.open(ARCHIVO_BILLETES.c_str(), ios::in);
+	if (leer_archivoBillete.fail()) {
+		cout << endl << " No se puede leer el archivo" << endl;
+		return;
+	}
+	
 	cin.ignore();
 	cout << "Ingrese cantidad de billete ";
 	cin >> modBillete.saldo;
-
-	ofstream tmpArchivo;
-	tmpArchivo.open(ARCHIVO_TEMPORAL.c_str(), ios::out);
+	
+	ofstream tmpArchivoBillete;
+	tmpArchivoBillete.open(ARCHIVO_TEMPORALBILLETE.c_str(), ios::out);
 	string billete, cantidad;
-	while (!leer_archivo.eof()) {
+	while (!leer_archivoBillete.eof()) {
 
-		getline(leer_archivo, billete, ';');
-		getline(leer_archivo, cantidad, '\n');
+		getline(leer_archivoBillete, billete, ';');
+		getline(leer_archivoBillete, cantidad, '\n');
 
-		if (billete.length() > 2)
+		if (billete.length() > 0)
 		{
-			if (atoi(billete.c_str()) == id) 
+			if (atoi(billete.c_str()) == id)
 			{
-				 //double saldotmp = atof(saldo.c_str())+monto;
-				tmpArchivo << billete << ";" << modBillete.saldo << "\n";
+				
+				//double saldotmp = atof(saldo.c_str())+monto;
+				tmpArchivoBillete << modBillete.billete << ";" << modBillete.saldo << "\n";
 
 			}
-			else 
+			else
 			{
-				tmpArchivo << billete << ";" << cantidad << "\n";
+				tmpArchivoBillete << billete << ";" << cantidad << "\n";
 			}
 		}
 
 	}
-	leer_archivo.close();
-	tmpArchivo.close();
+	leer_archivoBillete.close();
+	tmpArchivoBillete.close();
 	remove(ARCHIVO_BILLETES.c_str());
 	rename(ARCHIVO_TEMPORALBILLETE.c_str(), ARCHIVO_BILLETES.c_str());
 	system("pause");
+
+
 	menuAdministrador();
 }
 
-vector<Cliente> ObtenerListaCliente() 
+vector<Cliente> ObtenerListaCliente()
 {
 	vector<Cliente> lista;
 
@@ -540,7 +585,7 @@ vector<Cliente> ObtenerListaCliente()
 		return lista;
 	}
 
-	string codigo, nombre , saldo;
+	string codigo, nombre, saldo;
 	while (!leer_archivo.eof()) {
 		getline(leer_archivo, codigo, ';');
 		getline(leer_archivo, nombre, ';');
@@ -563,13 +608,13 @@ vector<Cliente> ObtenerListaCliente()
 	return lista;
 
 }
-void ordenarSEL(vector<Cliente> &lista) {
+void ordenarSEL(vector<Cliente>& lista) {
 	int idx;
 	int n = lista.size();
 	for (int i = 0; i < n - 1; i++) {
 		idx = i;
 		for (int j = i + 1; j < n; j++) {
-			if (strcmp(lista[j].nombre, lista[idx].nombre)<0)
+			if (strcmp(lista[j].nombre, lista[idx].nombre) < 0)
 			{
 				idx = j;
 			}
@@ -582,7 +627,7 @@ void ordenarSEL(vector<Cliente> &lista) {
 	}
 
 }
-void MostrarListaCliente(vector<Cliente>& lista) 
+void MostrarListaCliente(vector<Cliente>& lista)
 {
 	cout << endl << "Lista De Clientes" << endl;
 	for (int i = 0; i < lista.size(); i++)
