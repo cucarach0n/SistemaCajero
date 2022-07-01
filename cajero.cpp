@@ -256,9 +256,6 @@ void menuAdministrador() {
 			int codigo, cantidad;
 			cout << "Ingrese el codigo del billete: ";
 			cin >> codigo;
-			cout << "Ingrese la cantidad de billetes: ";
-			cin >> cantidad;
-
 			modificarBilletes(codigo);
 
 			menuPrincipal();
@@ -354,7 +351,7 @@ void listarBilletes() {
 	string billete, cantidad;
 	while (!leer_archivo.eof()) {
 		getline(leer_archivo, billete, ';');
-		getline(leer_archivo, cantidad, ';');
+		getline(leer_archivo, cantidad, '\n');
 
 		if (billete.length() > 0)
 		{
@@ -432,6 +429,13 @@ Cliente buscarCliente(int id)
 void ModificarCliente(int id) 
 {
 
+	Cliente modCliente = buscarCliente(id);
+    if (modCliente.codigo == -1)
+    {
+        cout << endl << "No encontrado" << endl;
+        return;
+    }
+
 	ifstream leer_archivo;
 	leer_archivo.open(ARCHIVO_CLIENTES.c_str(), ios::in);
 	if (leer_archivo.fail()) {
@@ -439,31 +443,28 @@ void ModificarCliente(int id)
 		return ;
 	}
 
-	Cliente modCliente;
+	
 	cin.ignore();
 	cout << "Nombre ";
-	cin.getline(modCliente.nombre, 30);
-
+	//cin.getline(modCliente.nombre, 30);
+	cin >> modCliente.nombre;
 	cout << "Saldo ";
 	cin >> modCliente.saldo;
 
 
 	ofstream tmpArchivo;
-	tmpArchivo.open(ARCHIVO_TEMPORAL.c_str(), ios::out);
-
-
+	tmpArchivo.open(ARCHIVO_TEMPORAL.c_str(), ios::out | ios::app);
 
 	string codigo, nombre, saldo;
 	while (!leer_archivo.eof()) {
 		getline(leer_archivo, codigo, ';');
-		getline(leer_archivo, nombre, ';');
 		getline(leer_archivo, saldo, '\n');
 
 		if (codigo.length() > 2)
 		{
 			if (atoi(codigo.c_str()) == id) 
 			{
-				 //double saldotmp = atof(saldo.c_str())+monto;
+				// double saldotmp = atof(saldo.c_str())+monto;
 				tmpArchivo << codigo << ";" << modCliente.nombre << ";" << modCliente.saldo << "\n";
 
 			}
@@ -484,6 +485,7 @@ void ModificarCliente(int id)
 
 void modificarBilletes(int id) 
 {
+	
 	ifstream leer_archivo;
 	leer_archivo.open(ARCHIVO_BILLETES.c_str(), ios::in);
 	if (leer_archivo.fail()) {
@@ -502,19 +504,19 @@ void modificarBilletes(int id)
 	while (!leer_archivo.eof()) {
 
 		getline(leer_archivo, billete, ';');
-		getline(leer_archivo, cantidad, ';');
+		getline(leer_archivo, cantidad, '\n');
 
 		if (billete.length() > 2)
 		{
 			if (atoi(billete.c_str()) == id) 
 			{
 				 //double saldotmp = atof(saldo.c_str())+monto;
-				tmpArchivo << id << ";" << modBillete.saldo << ";" << "\n";
+				tmpArchivo << billete << ";" << modBillete.saldo << "\n";
 
 			}
 			else 
 			{
-				tmpArchivo << billete << ";" << cantidad << ";" << "\n";
+				tmpArchivo << billete << ";" << cantidad << "\n";
 			}
 		}
 
@@ -538,7 +540,7 @@ vector<Cliente> ObtenerListaCliente()
 		return lista;
 	}
 
-	string codigo, nombre, saldo;
+	string codigo, nombre , saldo;
 	while (!leer_archivo.eof()) {
 		getline(leer_archivo, codigo, ';');
 		getline(leer_archivo, nombre, ';');
