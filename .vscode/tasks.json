@@ -7,7 +7,25 @@
             "command": "c:\\mingw64\\bin\\g++",
             "args": [
                 "-g",
-                "cajero.cpp"
+                "test.cpp",
+                "-o",
+                "test",
+                "-lcurl",
+                "-lnghttp2",
+                "-lidn2",
+                "-lssh2",
+                "-lssl",
+                "-lcrypto",
+                "-lgdi32",
+                "-lcrypt32",
+                "-lwldap32",
+                "-lbrotlidec",
+                "-lbrotlicommon",
+                "-lz",
+                "-lgsasl",
+                "-lws2_32"
+
+
             ],
             "group": {
                 "kind": "build",
