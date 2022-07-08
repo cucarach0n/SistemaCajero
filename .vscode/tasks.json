@@ -7,9 +7,9 @@
             "command": "c:\\mingw64\\bin\\g++",
             "args": [
                 "-g",
-                "test.cpp",
+                "cajero.cpp",
                 "-o",
-                "test",
+                "cajero",
                 "-lcurl",
                 "-lnghttp2",
                 "-lidn2",

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <winsock2.h>
 #include <windows.h>
 #include <conio.h>
 #include <string>
@@ -9,7 +10,19 @@
 #include <iomanip>
 #include <ctime>
 #include <sstream>
+////
+#include <curl/curl.h>
+//#include <json/json.h>
+//#include <dist/json/json.h>
+//#include <dist/json/json-forwards.h>
+#include <dist/jsoncpp.cpp>
 
+#include <algorithm>
+#include <locale>
+#include <iterator>
+
+#define CURL_STATICLIB
+////
 using namespace std;
 using std::stoi;
 const string ARCHIVO_CLIENTES = "clientes.txt";
@@ -17,6 +30,10 @@ const string ARCHIVO_TEMPORAL = "temporal.txt";
 const string ARCHIVO_TEMPORALBILLETE = "temporalBillete.txt";
 const string ARCHIVO_BILLETES = "contenedorBilletes.txt";
 const string ARCHIVO_MOVIMIENTOS = "movimiento.txt";
+////variables para la consulta de los datos del cliente
+const std::string ARCHIVO_JSON = "json.json";
+const std::string RUTA_RENIEC = ".env";
+
 
 struct Cliente
 {
@@ -37,7 +54,10 @@ struct Billete
 	double saldo100;
 	double saldo200;
 };
-
+//funciones para consultar dni
+string obtenerNombre(string dni);
+std::string soloLetras(const std::string& str);
+static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp);
 //funciones administrador
 void registrarCliente();
 void listarCliente();
@@ -51,6 +71,11 @@ void modificarBilletes(int id);
 Billete buscarBillete(int id);
 Cliente buscarClienteDni(string dni);
 void registrarCajero();
+long balanceSaldoListaREC(int lista[], int inicio, int fin);
+int contarRegistros();
+int* ObtenerArraySaldoCliente(int cantidad);
+string* ObtenerArrayNombreCliente(vector<Cliente>& lista);
+int busquedaBinariaDV(string lista[], int inicio, int fin, string busqueda);
 
 //funcione cliente
 void depositar();
@@ -61,6 +86,7 @@ void registrarMovimientos(int codigoCliente, int monto, int codigoCajero, string
 void listarMovimiento();
 void pagarServicio();
 void transferirSaldo();
+void EliminarCliente();
 
 //variables globales
 Cliente clienteValidado;
@@ -259,10 +285,12 @@ void menuAdministrador() {
 		cout << " [2] Listar Clientes " << endl;
 		cout << " [3] Buscar Clientes " << endl;
 		cout << " [4] Modificar Clientes " << endl;
-		cout << " [5] Listar Dispensador " << endl;
-		cout << " [6] Modificar Dispensador " << endl;
-		cout << " [7] Registrar Cajero " << endl;
-		cout << " [8] Salir " << endl;
+		cout << " [5] Eliminar Clientes " << endl;
+		cout << " [6] Listar Dispensador " << endl;
+		cout << " [7] Modificar Dispensador " << endl;
+		cout << " [8] Registrar Cajero " << endl;
+		cout << " [9] Mostrar saldo cuentas " << endl;
+		cout << " [10] Salir " << endl;
 		cout << " Elija a donde desea ir: ";
 		cin >> mc;
 
@@ -284,11 +312,16 @@ void menuAdministrador() {
 			break; }
 		case '3': {
 			system("cls");
-			int id;
-			cout << "Ingrese el id del cliente que desea buscar: ";
-			cin >> id;
-			Cliente  cli = buscarCliente(id);
-			if (cli.codigo == -1) {
+			string dni;
+			cout << "Ingrese el dni del cliente que desea buscar: ";
+			cin >> dni;
+			Cliente  cli = buscarClienteDni(dni);
+
+			vector<Cliente> lisClientes = ObtenerListaCliente();
+			ordenarSEL(lisClientes);
+			string* listaOrdenada = ObtenerArrayNombreCliente(lisClientes);
+			int resultado = busquedaBinariaDV(listaOrdenada, 0, lisClientes.size() - 1,dni);
+			if (resultado == -1) {
 				cout << "No se encontro el cliente" << endl;
 			}
 			else {
@@ -297,6 +330,7 @@ void menuAdministrador() {
 				cout << "Saldo: " << cli.saldo << endl;
 			}
 			system("pause");
+			menuAdministrador();
 			break; }
 		case '4': {
 			system("cls");
@@ -306,11 +340,15 @@ void menuAdministrador() {
 			ModificarCliente(id);
 			break; }
 		case '5': {
+			system("cls");
+			EliminarCliente();
+			break; }
+		case '6': {
 			listarBilletes();
 			system("pause");
 			menuAdministrador();
 			break; }
-		case '6': {
+		case '7': {
 			int codigo;
 			cout << "Ingrese el codigo del billete: ";
 			cin >> codigo;
@@ -319,11 +357,25 @@ void menuAdministrador() {
 
 			menuPrincipal();
 			break; }
-		case '7': {
+		case '8': {
 			system("cls");
 			registrarCajero();
 			break; }
-		case '8': {
+		case '9': {
+			system("cls");
+
+			int cantidad = contarRegistros();
+
+			int* listaSaldos = NULL;
+			listaSaldos = ObtenerArraySaldoCliente(cantidad);
+
+			long totalSaldo = balanceSaldoListaREC(listaSaldos,0,contarRegistros() - 1);
+
+			cout << "El total de saldo en las cuentas es: " << totalSaldo << endl;
+			system("pause");
+			system("cls");
+			break; }
+		default: {
 			menuPrincipal();
 			break; }
 		}
@@ -352,10 +404,15 @@ void registrarCliente() {
 			double saldo;
 		*/
 		cin.ignore();
-		cout << "Nombre: ";
-		cin.getline(c.nombre, 30);
 		cout << "dni: ";
 		cin.getline(c.dni, 30);
+		string BusquedaDni = obtenerNombre(c.dni);
+		int n = BusquedaDni.length();
+		strcpy(c.nombre, BusquedaDni.c_str());
+		
+		cout << "Nombre: " + std::string(c.nombre) << endl;
+		//cin.getline(c.nombre, 30);
+		
 		c.pin = 1000+rand()%(9999-1000);
 		cout << "Saldo: ";
 		cin >> c.saldo;
@@ -694,33 +751,26 @@ Billete buscarBillete(int id)
 
 void ModificarCliente(int id)
 {
-
 	Cliente modCliente = buscarCliente(id);
 	if (modCliente.codigo == -1)
 	{
 		cout << endl << "No encontrado" << endl;
 		return;
 	}
-
 	ifstream leer_archivo;
 	leer_archivo.open(ARCHIVO_CLIENTES.c_str(), ios::in);
 	if (leer_archivo.fail()) {
 		cout << endl << " No se puede leer el archivo" << endl;
 		return;
 	}
-
-
 	cin.ignore();
 	cout << "Nombre ";
 	cin.getline(modCliente.nombre, 30);
 	//cin >> modCliente.nombre;
 	cout << "Saldo ";
 	cin >> modCliente.saldo;
-
-
 	ofstream tmpArchivo;
 	tmpArchivo.open(ARCHIVO_TEMPORAL.c_str(), ios::out | ios::app);
-
 	string codigo, nombre, dni,pin,saldo;
 	while (!leer_archivo.eof()) {
 		getline(leer_archivo, codigo, ';');
@@ -728,14 +778,12 @@ void ModificarCliente(int id)
 		getline(leer_archivo, dni, ';');
 		getline(leer_archivo, pin, ';');
 		getline(leer_archivo, saldo, '\n');
-
 		if (codigo.length() > 0)
 		{
 			if (atoi(codigo.c_str()) == id)
 			{
 				// double saldotmp = atof(saldo.c_str())+monto;
 				tmpArchivo << modCliente.codigo << ";" << modCliente.nombre << ";" << modCliente.dni << ";" << modCliente.pin << ";"<< modCliente.saldo << "\n";
-
 			}
 			else
 			{
@@ -827,6 +875,55 @@ void modificarBilletes(int id)
 
 	menuAdministrador();
 }
+
+void EliminarCliente(){
+	
+	ifstream leer_archivo;
+	leer_archivo.open(ARCHIVO_CLIENTES.c_str(), ios::in);
+	if (leer_archivo.fail()) {
+		cout << endl << " No se puede leer el archivo" << endl;
+		return;
+	}
+	cin.ignore();
+	string dniEliminar;
+	cout << "DNI: ";
+	cin >> dniEliminar;
+
+	Cliente modCliente = buscarClienteDni(dniEliminar);
+	if (modCliente.codigo == -1)
+	{
+		cout << endl << "No encontrado" << endl;
+		return;
+	}
+
+	ofstream tmpArchivo;
+	tmpArchivo.open(ARCHIVO_TEMPORAL.c_str(), ios::out | ios::app);
+	string codigo, nombre, dni,pin,saldo;
+	while (!leer_archivo.eof()) {
+		getline(leer_archivo, codigo, ';');
+		getline(leer_archivo, nombre, ';');
+		getline(leer_archivo, dni, ';');
+		getline(leer_archivo, pin, ';');
+		getline(leer_archivo, saldo, '\n');
+		if (codigo.length() > 0)
+		{
+			if (dni.c_str() != dniEliminar)
+			{
+				tmpArchivo << codigo << ";" << nombre << ";" << dni << ";" << pin << ";"<< saldo << "\n";
+			}
+		}
+
+	}
+	leer_archivo.close();
+	tmpArchivo.close();
+	remove(ARCHIVO_CLIENTES.c_str());
+	rename(ARCHIVO_TEMPORAL.c_str(), ARCHIVO_CLIENTES.c_str());
+
+	cout << endl << "ELiminado correctamente!" << endl;
+	system("pause");
+	menuAdministrador();
+}
+
 void depositarBilletesCajero(Billete modBillete)
 {
 
@@ -913,6 +1010,57 @@ vector<Cliente> ObtenerListaCliente()
 	return lista;
 
 }
+
+int* ObtenerArraySaldoCliente(int cantidad)
+{
+	int* listita = new int[cantidad];
+	int contador = 0;
+
+	ifstream leer_archivo;
+	leer_archivo.open(ARCHIVO_CLIENTES.c_str(), ios::in);
+	if (leer_archivo.fail()) {
+		cout << endl << " No se puede leer el archivo" << endl;
+		return listita;
+	}
+
+	string codigo, nombre, dni,pin,saldo;
+	while (!leer_archivo.eof()) {
+		getline(leer_archivo, codigo, ';');
+		getline(leer_archivo, nombre, ';');
+		getline(leer_archivo, dni, ';');
+		getline(leer_archivo, pin, ';');
+		getline(leer_archivo, saldo, '\n');
+
+		if (codigo.length() > 0)
+		{
+			
+			listita[contador] = atoi(saldo.c_str());
+			contador++;
+
+		}
+
+	}
+	leer_archivo.close();
+
+	return listita;
+
+}
+
+
+string* ObtenerArrayNombreCliente(vector<Cliente>& lista)
+{
+	string* listita = new string[lista.size()];
+	int contador = 0;
+	for(int i = 0; i < lista.size(); i++)
+	{
+		listita[contador] = lista[i].dni;
+		contador++;
+	}
+
+	return listita;
+
+}
+
 void ordenarSEL(vector<Cliente>& lista) {
 	int idx;
 	int n = lista.size();
@@ -1314,4 +1462,142 @@ void transferirSaldo(){
 
 	}
 
+}
+
+long balanceSaldoListaREC(int lista[], int inicio, int fin) {
+
+	if (inicio <= fin) {
+		return balanceSaldoListaREC(lista, inicio + 1, fin) + lista[inicio];
+	}
+	else {
+		return 0;
+	}
+}
+
+int contarRegistros(){
+	int contador = 0;
+	ifstream leer_archivo;
+	leer_archivo.open(ARCHIVO_CLIENTES.c_str(), ios::in);
+	if (leer_archivo.fail()) {
+		cout << endl << " No se puede leer el archivo" << endl;
+		return 0;
+	}
+
+	string codigo, nombre, dni,pin,saldo;
+	while (!leer_archivo.eof()) {
+		getline(leer_archivo, codigo, ';');
+		getline(leer_archivo, nombre, ';');
+		getline(leer_archivo, dni, ';');
+		getline(leer_archivo, pin, ';');
+		getline(leer_archivo, saldo, '\n');
+		if (codigo.length() > 0)
+		{
+			contador++;
+		}
+
+	}
+	leer_archivo.close();
+	return contador;
+
+}
+
+long sumarDIV(int lista[], int inicio, int fin) {
+	if (inicio == fin) {
+		return lista[inicio];
+	}
+	else {
+		int medio = (inicio + fin) / 2;
+		long izq = sumarDIV(lista, inicio, medio);
+		long der = sumarDIV(lista, medio + 1, fin);
+		return izq + der;
+	}
+}
+
+int busquedaBinariaDV(string lista[], int inicio, int fin, string busqueda){
+    if(inicio <= fin){
+        int mitad = (inicio + fin) / 2;
+        if (lista[mitad] == busqueda){
+        	return mitad;
+		}
+		else if (lista[mitad] < busqueda){
+			return busquedaBinariaDV(lista, inicio, mitad - 1, busqueda);
+		}
+		else if (lista[mitad] > busqueda){
+			return busquedaBinariaDV(lista, mitad + 1, fin, busqueda);
+		}
+	}else{
+		return -1;
+	}
+    return -1;
+}
+
+//////////consulta dni
+static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}
+
+std::string soloLetras(const std::string& str)
+{
+    const char CaracteresIndeseados[] = { '\"'};
+    string cadenaLimpia;
+    int n = str.length();
+    char cadena[n + 1];
+    strcpy(cadena, str.c_str());
+    int Switch = 0;
+    for (int i = 0; i < strlen(cadena); i++)
+    {
+        for (int j = 0; j < 1; j++)
+            if (cadena[i] == CaracteresIndeseados[j]) Switch = 1;
+
+        if (Switch == 0) cadenaLimpia += cadena[i];
+        Switch = 0;
+    }
+    //cout << cadenaLimpia << endl;
+    return cadenaLimpia;
+}
+
+string obtenerNombre(string dni){
+  CURL *curl;
+  CURLcode res;
+  std::string readBuffer;
+  /*string dni;
+  cout << "Ingrese DNI a buscar: ";
+  getline(cin,dni);*/
+  curl = curl_easy_init();
+  string url = "http://pad.minem.gob.pe/TICKET/Ticket/ValidarRucServiceDNI?dni="+ dni+"&tipoDoc=1";
+  
+  if(curl) {
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+
+    //curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "code=72784658&numero_dni=72403225");
+
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+    res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+
+    remove(ARCHIVO_JSON.c_str());
+    std::ofstream fescribir;
+		fescribir.open(ARCHIVO_JSON.c_str(), ios::out | ios::app); // crear y agregar
+		fescribir << readBuffer ;
+		fescribir.close();
+
+    ifstream ifs(ARCHIVO_JSON.c_str());
+    Json::Reader reader;
+    Json::Value obj;
+    reader.parse(ifs, obj); 
+    string name,apellidop,apellidom ;
+    name = obj["Nombres"].asString();
+    apellidop = obj["ApellidoPaterno"].asString();
+    apellidom = obj["ApellidoMaterno"].asString();
+    //cout << soloLetras(name) << " " << soloLetras(apellidop) << " " << soloLetras(apellidom) << endl;
+    /*for (int i = 0; i < obj.size(); i++){
+      cout << obj[i]["id"].asString() << endl;
+    }
+    */
+    return soloLetras(name);
+  }
+  return "";
 }

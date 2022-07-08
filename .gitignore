@@ -30,7 +30,8 @@
 *.exe
 *.out
 *.app
-
+cajero.exe
 #files
 *.json
+*.env
 # End of https://mrkandreev.name/snippets/gitignore-generator/#C++

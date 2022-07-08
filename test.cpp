@@ -42,9 +42,54 @@ std::string soloLetras(const std::string& str)
     //cout << cadenaLimpia << endl;
     return cadenaLimpia;
 }
+
+string obtenerNombre(string dni){
+  CURL *curl;
+  CURLcode res;
+  std::string readBuffer;
+  /*string dni;
+  cout << "Ingrese DNI a buscar: ";
+  getline(cin,dni);*/
+  curl = curl_easy_init();
+  string url = "http://pad.minem.gob.pe/TICKET/Ticket/ValidarRucServiceDNI?dni="+ dni+"&tipoDoc=1";
+  
+  if(curl) {
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+
+    //curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "code=72784658&numero_dni=72403225");
+
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+    res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+
+    remove(ARCHIVO_JSON.c_str());
+    std::ofstream fescribir;
+		fescribir.open(ARCHIVO_JSON.c_str(), ios::out | ios::app); // crear y agregar
+		fescribir << readBuffer ;
+		fescribir.close();
+
+    ifstream ifs(ARCHIVO_JSON.c_str());
+    Json::Reader reader;
+    Json::Value obj;
+    reader.parse(ifs, obj); 
+    string name,apellidop,apellidom ;
+    name = obj["Nombres"].asString();
+    apellidop = obj["ApellidoPaterno"].asString();
+    apellidom = obj["ApellidoMaterno"].asString();
+    //cout << soloLetras(name) << " " << soloLetras(apellidop) << " " << soloLetras(apellidom) << endl;
+    /*for (int i = 0; i < obj.size(); i++){
+      cout << obj[i]["id"].asString() << endl;
+    }
+    */
+    return soloLetras(name);
+  }
+  return "";
+}
+
 int main(void)
 {
-  CURL *curl;
+  /*CURL *curl;
   CURLcode res;
   std::string readBuffer;
   string dni;
@@ -78,11 +123,12 @@ int main(void)
     apellidop = obj["ApellidoPaterno"].asString();
     apellidom = obj["ApellidoMaterno"].asString();
     cout << soloLetras(name) << " " << soloLetras(apellidop) << " " << soloLetras(apellidom) << endl;
-    /*for (int i = 0; i < obj.size(); i++){
-      cout << obj[i]["id"].asString() << endl;
-    }
-    */
-  }
+    
+  }*/
+  string dni;
+  cout << "Ingrese DNI a buscar: ";
+  getline(cin,dni);
+  cout << obtenerNombre(dni) << endl;
   system("pause");
   return 0;
 }
